@@ -17,6 +17,7 @@ import {
   positiveIntegerRecordConfigError,
   providerBaseUrlConfigError,
   providerHeadersConfigError,
+  providerProxyConfigError,
   reasoningSummaryDeliveryRecordConfigError,
   upstreamHttpVersionConfigError,
 } from "./config/provider-validation";
@@ -548,6 +549,8 @@ const providerConfigSchema = z.object({
   decodesNativeCompactionBlobs: z.boolean().optional(),
   allowEncryptedV2AgentTasks: z.boolean().optional(),
   allowPrivateNetwork: z.boolean().optional(),
+  // Optional provider HTTP(S) proxy override; absent inherits global routing.
+  proxy: z.string().min(1).optional(),
   // The management API accepts `null` as "clear this", so a config written before the POST
   // canonicalization below can hold one on disk. Rejecting it here would send the operator
   // through invalid-config recovery for a value the API told them was fine.
@@ -1339,6 +1342,14 @@ const configSchema = z.object({
         code: "custom",
         path: ["providers", redactSecretString(name), "responsesPath"],
         message: responsesPathError,
+      });
+    }
+    const proxyError = providerProxyConfigError((provider as { proxy?: unknown }).proxy);
+    if (proxyError) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["providers", redactSecretString(name), "proxy"],
+        message: proxyError,
       });
     }
     const headersError = providerHeadersConfigError((provider as { headers?: unknown }).headers);
